@@ -126,3 +126,63 @@ where
         Self::new(S::default(), [Sym::default()].into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Default, Debug, PartialEq, Eq)]
+    struct Inc;
+    struct IncExecutor;
+
+    impl Executor<Inc, bool> for IncExecutor {
+        fn execute(state: &Inc, symbol: &bool) -> Rule<Inc, bool> {
+            if *symbol {
+                Rule {
+                    new_state: None,
+                    write: Some(false),
+                    head_move: Some(Move::Right),
+                }
+            } else {
+                Rule {
+                    new_state: Some(State::Halt),
+                    write: Some(true),
+                    head_move: None,
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn binary_inc_test() {
+        let mut machine: Machine<Inc, bool> = Machine::new(Inc, [false, true].into());
+
+        while !machine.halted() {
+            machine.execute::<IncExecutor>();
+        }
+
+        let (mut vec, state) = machine.finish();
+
+        vec.make_contiguous();
+        let (vec_slice, _) = vec.as_slices();
+
+        assert_eq!(vec_slice, &[true, true]);
+        assert_eq!(state, State::Halt);
+
+        let mut machine: Machine<Inc, bool> = Machine::new(Inc, [true, true].into());
+
+        while !machine.halted() {
+            machine.execute::<IncExecutor>();
+        }
+
+        let (mut vec, state) = machine.finish();
+
+        vec.make_contiguous();
+        let (vec_slice, _) = vec.as_slices();
+
+        assert_eq!(vec_slice, &[false, false, true]);
+        assert_eq!(state, State::Halt);
+    }
+
+    // TODO: Test something that involves traversing the head backwards
+}
